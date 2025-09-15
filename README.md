@@ -2,7 +2,7 @@ Code Associated With:
 
 ## Machine Learning-Driven Prediction of TLR4 Binding Affinity: A Comprehensive Molecular Feature Analysis for Drug Discovery
 
-#### Brandon Yee, Maximilian Rutowski, Wilson Collins, Daniel Huang, Caden Wang, Mihir Tekal, Lev Kung, Oliver Pierborne
+#### Brandon Yee, Maximilian Rutowski, Wilson Collins, Daniel Huang, Caden Wang, Lev Kung, Oliver Pierborne
 
 Correspondence: b.yee@ycrg-labs.org
 
