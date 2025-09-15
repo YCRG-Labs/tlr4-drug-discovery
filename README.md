@@ -8,41 +8,53 @@ Correspondence: b.yee@ycrg-labs.org
 
 Data from: [TLR4 Binding Data](https://github.com/YCRG-Labs/binding-data)
 
-### Quick Start
+### **Quick Start**
 
 ``` bash
-# 0) From repo root
+# 0) Setup repository
 git clone https://github.com/YCRG-Labs/drug_discovery_tlr4
-
-# 1) From dataset repo
 cd drug_discovery_tlr4
 git clone https://github.com/YCRG-Labs/binding-data.git
 
-# 2) Create/activate env
-python3 -m venv venv && source venv/bin/activate
+# 1) Environment setup
+python -m venv venv
+# Windows:
+venv\Scripts\activate
+# Linux/Mac:
+source venv/bin/activate
 
-# 3) Install deps
+# 2) Install dependencies
 pip install -r requirements.txt
 
-# 4) Prepare inputs (adjust paths if yours differ)
-#    - PDBQT files in: binding-data/raw/pdbqt/
-#    - Binding CSV at: binding-data/processed/processed_logs.csv
+# 3) Run Enhanced Research Pipeline (RECOMMENDED)
+python main.py \
+  --pdbqt-dir binding-data/raw/pdbqt \
+  --binding-csv binding-data/processed/processed_logs.csv \
+  --output-dir enhanced_research_results \
+  --splitting scaffold
 
-# 5) Run full pipeline (features + preprocess + train + evaluate)
-python main.py --pipeline complete --pdbqt-dir binding-data/raw/pdbqt --binding-csv binding-data/processed/processed_logs.csv
+# Alternative splitting methods:
+# --splitting random    # Random splitting
+# --splitting scaffold  # Molecular scaffold splitting (prevents data leakage)
 
-# 6) Or run stage-by-stage
 
-# 6a) Extract features
-python main.py --pipeline features
-  --pdbqt-dir binding-data/raw/pdbqt
-
-# 6b) Train models (uses generated features + binding data)
-python main.py --pipeline train --features-csv data/processed/features.csv --binding-csv binding-data/processed/processed_logs.csv
-
-# 6c) Predict for a single compound
-python main.py --pipeline predict --model-path models/trained/best_model.joblib --pdbqt-file binding-data/raw/pdbqt/example.pdbqt
-
-# 7) (Recommended) Run tests in verbose mode
+# 5) Run tests
 python -m pytest tests -v
+```
+
+### **Stage-by-Stage Usage**
+
+``` bash
+# Feature extraction only
+python main.py --pipeline features --pdbqt-dir binding-data/raw/pdbqt
+
+# Model training only  
+python main.py --pipeline train \
+  --features-csv data/processed/features.csv \
+  --binding-csv binding-data/processed/processed_logs.csv
+
+# Single compound prediction
+python main.py --pipeline predict \
+  --model-path models/trained/best_model.joblib \
+  --pdbqt-file binding-data/raw/pdbqt/example.pdbqt
 ```
