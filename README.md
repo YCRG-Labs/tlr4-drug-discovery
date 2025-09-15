@@ -12,7 +12,7 @@ Data from: [TLR4 Binding Data](https://github.com/YCRG-Labs/binding-data)
 
 ``` bash
 # 0) Setup repository
-git clone https://github.com/YCRG-Labs/drug_discovery_tlr4
+git clone https://github.com/YCRG-Labs/tlr4-drug-discovery.git
 cd drug_discovery_tlr4
 git clone https://github.com/YCRG-Labs/binding-data.git
 
