@@ -2,7 +2,7 @@ Code Associated With:
 
 ## Machine Learning-Driven Prediction of TLR4 Binding Affinity: A Comprehensive Molecular Feature Analysis for Drug Discovery
 
-#### Brandon Yee, Maximilian Rutowski, Wilson Collins, Daniel Huang, Caden Wang, Mihir Tekal, Lev Kung, Oliver Pierborne
+#### Brandon Yee, Maximilian Rutowski, and Wilson Collins
 
 Correspondence: b.yee@ycrg-labs.org
 
@@ -12,7 +12,7 @@ Data from: [TLR4 Binding Data](https://github.com/YCRG-Labs/binding-data)
 
 ``` bash
 # 0) Setup repository
-git clone https://github.com/YCRG-Labs/drug_discovery_tlr4
+git clone https://github.com/YCRG-Labs/tlr4-drug-discovery.git
 cd drug_discovery_tlr4
 git clone https://github.com/YCRG-Labs/binding-data.git
 
