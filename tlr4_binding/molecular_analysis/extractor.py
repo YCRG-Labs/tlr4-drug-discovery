@@ -170,15 +170,23 @@ class MolecularFeatureExtractor:
                         descriptors_2d = self.descriptor_calculator.calculate_descriptors(smiles)
                         features_dict.update(descriptors_2d)
                     else:
-                        logger.warning(f"Could not extract SMILES from {pdbqt_path}")
-                        # Use default values for 2D descriptors
-                        features_dict.update(self._get_default_2d_features())
+                        logger.warning(f"Could not extract SMILES from {pdbqt_path}, using coordinate-based features")
+                        # Use coordinate-based features as fallback
+                        coord_features = self._extract_coordinate_features(pdbqt_path)
+                        features_dict.update(coord_features)
+                        # Fill remaining 2D features with NaN
+                        default_2d = self._get_default_2d_features()
+                        for key, value in default_2d.items():
+                            if key not in features_dict:
+                                features_dict[key] = value
                     
                 except Exception as e:
                     error_msg = f"Error extracting 2D features from {pdbqt_path}: {str(e)}"
                     logger.warning(error_msg)
                     self.robustness_manager.log_error(e, {'file': pdbqt_path, 'stage': '2d_features'})
-                    # Use graceful degradation - fall back to default features
+                    # Use graceful degradation - fall back to coordinate features
+                    coord_features = self._extract_coordinate_features(pdbqt_path)
+                    features_dict.update(coord_features)
                     features_dict.update(self._get_default_2d_features())
                 
                 desc_2d_time = time.time() - desc_2d_start
@@ -431,8 +439,8 @@ class MolecularFeatureExtractor:
         
         Attempts to extract SMILES from PDBQT file using multiple approaches:
         1. Look for SMILES in REMARK lines
-        2. Try to reconstruct from atom coordinates using RDKit
-        3. Use compound name lookup if available
+        2. Try compound name lookup in SMILES database
+        3. Try to reconstruct from atom coordinates using RDKit
         
         Args:
             parsed_data: Parsed PDBQT data
@@ -442,8 +450,8 @@ class MolecularFeatureExtractor:
         """
         try:
             # Method 1: Check for SMILES in REMARK lines
-            if 'remarks' in parsed_data:
-                for remark in parsed_data['remarks']:
+            if 'header' in parsed_data:
+                for remark in parsed_data['header']:
                     if 'SMILES' in remark.upper():
                         # Extract SMILES from remark line
                         parts = remark.split()
@@ -453,7 +461,15 @@ class MolecularFeatureExtractor:
                                 if self._validate_smiles(potential_smiles):
                                     return potential_smiles
             
-            # Method 2: Try to reconstruct from coordinates (if RDKit is available)
+            # Method 2: Compound name lookup in SMILES database
+            compound_name = parsed_data.get('file_path', '')
+            if compound_name:
+                compound_name = Path(compound_name).stem.lower()
+                smiles = self._lookup_smiles_by_name(compound_name)
+                if smiles:
+                    return smiles
+            
+            # Method 3: Try to reconstruct from coordinates (if RDKit is available)
             if 'atoms' in parsed_data and len(parsed_data['atoms']) > 0:
                 try:
                     smiles = self._reconstruct_smiles_from_coords(parsed_data['atoms'])
@@ -462,8 +478,8 @@ class MolecularFeatureExtractor:
                 except Exception as e:
                     logger.debug(f"SMILES reconstruction failed: {str(e)}")
             
-            # Method 3: Return None to use default features
-            logger.debug("SMILES extraction not possible, using default 2D features")
+            # Method 4: Return None to use coordinate-based features
+            logger.debug("SMILES extraction not possible, using coordinate-based features")
             return None
             
         except Exception as e:
@@ -486,6 +502,52 @@ class MolecularFeatureExtractor:
             return mol is not None
         except Exception:
             return False
+    
+    def _lookup_smiles_by_name(self, compound_name: str) -> Optional[str]:
+        """
+        Look up SMILES string by compound name.
+        
+        Args:
+            compound_name: Name of the compound
+            
+        Returns:
+            SMILES string or None if not found
+        """
+        # Common drug-like compounds and their SMILES
+        smiles_database = {
+            'aspirin': 'CC(=O)OC1=CC=CC=C1C(=O)O',
+            'ibuprofen': 'CC(C)CC1=CC=C(C=C1)C(C)C(=O)O',
+            'acetaminophen': 'CC(=O)NC1=CC=C(C=C1)O',
+            'caffeine': 'CN1C=NC2=C1C(=O)N(C(=O)N2C)C',
+            'morphine': 'CN1CC[C@]23C4=C5C=CC(=C4C(=O)CC[C@H]2[C@H]1CC6=C3C(=C(C=C6)O)O5)O',
+            'benzene': 'C1=CC=CC=C1',
+            'pyridine': 'C1=CC=NC=C1',
+            'furan': 'C1=COC=C1',
+            'thiophene': 'C1=CSC=C1',
+            'imidazole': 'C1=CN=CN1',
+            'phenol': 'C1=CC=C(C=C1)O',
+            'aniline': 'C1=CC=C(C=C1)N',
+            'toluene': 'CC1=CC=CC=C1',
+            'glucose': 'C([C@@H]1[C@H]([C@@H]([C@H]([C@H](O1)O)O)O)O)O',
+            'ethanol': 'CCO',
+            'methanol': 'CO',
+            'acetone': 'CC(=O)C',
+            'formaldehyde': 'C=O',
+            'water': 'O'
+        }
+        
+        compound_name = compound_name.lower().strip()
+        
+        # Try exact match first
+        if compound_name in smiles_database:
+            return smiles_database[compound_name]
+        
+        # Try partial matches
+        for known_compound, smiles in smiles_database.items():
+            if known_compound in compound_name or compound_name in known_compound:
+                return smiles
+        
+        return None
     
     def _reconstruct_smiles_from_coords(self, atoms: List[Dict]) -> Optional[str]:
         """
@@ -514,8 +576,139 @@ class MolecularFeatureExtractor:
             logger.debug(f"SMILES reconstruction error: {str(e)}")
             return None
     
+    def _extract_coordinate_features(self, pdbqt_path: str) -> Dict[str, float]:
+        """
+        Extract coordinate-based features when SMILES is not available.
+        
+        Args:
+            pdbqt_path: Path to PDBQT file
+            
+        Returns:
+            Dictionary of coordinate-based features
+        """
+        try:
+            # Parse PDBQT file to extract coordinates
+            coordinates = []
+            elements = []
+            
+            with open(pdbqt_path, 'r') as f:
+                for line in f:
+                    if line.startswith(('ATOM', 'HETATM')):
+                        try:
+                            x = float(line[30:38].strip())
+                            y = float(line[38:46].strip())
+                            z = float(line[46:54].strip())
+                            element = line[76:78].strip() or line[12:16].strip()[0]
+                            
+                            coordinates.append([x, y, z])
+                            elements.append(element)
+                        except (ValueError, IndexError):
+                            continue
+            
+            if not coordinates:
+                return {}
+            
+            coords = np.array(coordinates)
+            
+            # Calculate coordinate-based features
+            features = {}
+            
+            # Geometric center
+            center = np.mean(coords, axis=0)
+            
+            # Distances from center
+            distances = np.linalg.norm(coords - center, axis=1)
+            
+            # Basic geometric features
+            features['coord_radius_of_gyration'] = np.sqrt(np.mean(distances**2))
+            features['coord_max_distance'] = np.max(distances)
+            features['coord_mean_distance'] = np.mean(distances)
+            
+            # Bounding box features
+            min_coords = np.min(coords, axis=0)
+            max_coords = np.max(coords, axis=0)
+            dimensions = max_coords - min_coords
+            
+            features['coord_length'] = dimensions[0]
+            features['coord_width'] = dimensions[1]
+            features['coord_height'] = dimensions[2]
+            features['coord_volume'] = np.prod(dimensions)
+            
+            # Shape descriptors
+            if dimensions[1] > 0:
+                features['coord_elongation'] = dimensions[0] / dimensions[1]
+            else:
+                features['coord_elongation'] = 1.0
+                
+            if dimensions[2] > 0:
+                features['coord_flatness'] = dimensions[1] / dimensions[2]
+            else:
+                features['coord_flatness'] = 1.0
+            
+            # Atom counts
+            features['coord_total_atoms'] = len(elements)
+            
+            return features
+            
+        except Exception as e:
+            logger.warning(f"Error extracting coordinate features from {pdbqt_path}: {e}")
+            return {}
+    
     def _get_default_2d_features(self) -> Dict[str, float]:
-        """Get default values for 2D molecular features."""
+        """
+        Get default 2D molecular descriptors filled with NaN.
+        
+        Returns:
+            Dictionary of 2D features with NaN values
+        """
+        return {
+            # Basic molecular properties
+            'molecular_weight': np.nan,
+            'heavy_atoms': np.nan,
+            'heteroatoms': np.nan,
+            'formal_charge': np.nan,
+            'rotatable_bonds': np.nan,
+            
+            # Lipophilicity descriptors
+            'logp': np.nan,
+            'molar_refractivity': np.nan,
+            'tpsa': np.nan,
+            
+            # Hydrogen bonding
+            'hbd': np.nan,
+            'hba': np.nan,
+            
+            # Ring features
+            'ring_count': np.nan,
+            'aromatic_rings': np.nan,
+            'aliphatic_rings': np.nan,
+            'saturated_rings': np.nan,
+            'aromatic_ratio': np.nan,
+            
+            # Shape descriptors
+            'radius_of_gyration': np.nan,
+            'asphericity': np.nan,
+            'eccentricity': np.nan,
+            'spherocity_index': np.nan,
+            'elongation': np.nan,
+            'flatness': np.nan,
+            
+            # Surface properties
+            'surface_area': np.nan,
+            'polar_surface_area': np.nan,
+            'hydrophobic_surface_area': np.nan,
+            'molecular_volume': np.nan,
+            'compactness': np.nan,
+            
+            # Connectivity indices
+            'balaban_j': np.nan,
+            'bertz_ct': np.nan,
+            'chi0v': np.nan,
+            'chi1v': np.nan,
+            'chi2v': np.nan,
+            'chi3v': np.nan,
+            'chi4v': np.nan
+        }
         return {
             'molecular_weight': np.nan,
             'logp': np.nan,
@@ -529,18 +722,11 @@ class MolecularFeatureExtractor:
             'aromatic_rings': np.nan,
             'aliphatic_rings': np.nan,
             'saturated_rings': np.nan,
-            'aromatic_atoms': np.nan,
             'heavy_atoms': np.nan,
             'heteroatoms': np.nan,
             'dipole_moment': np.nan,
             'polarizability': np.nan,
             'electronegativity': np.nan,
-            'molecular_volume': np.nan,
-            'surface_area': np.nan,
-            'radius_of_gyration': np.nan,
-            'asphericity': np.nan,
-            'eccentricity': np.nan,
-            'spherocity_index': np.nan,
             'balaban_j': np.nan,
             'bertz_ct': np.nan,
             'chi0v': np.nan,
@@ -553,7 +739,12 @@ class MolecularFeatureExtractor:
             'bridgehead_atoms': np.nan,
             'spiro_atoms': np.nan,
             'qed': np.nan,
-            'lipinski_violations': np.nan
+            'lipinski_violations': np.nan,
+            'morgan_fingerprint_density': np.nan,
+            'maccs_keys_density': np.nan,
+            'molecular_flexibility': np.nan,
+            'aromatic_ratio': np.nan,
+            'heteroatom_ratio': np.nan
         }
     
     def _get_default_3d_features(self) -> Dict[str, float]:

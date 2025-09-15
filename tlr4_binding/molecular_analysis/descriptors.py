@@ -158,22 +158,22 @@ class MolecularDescriptorCalculator(MolecularDescriptorCalculatorInterface):
             'aromatic_rings': Descriptors.NumAromaticRings,
             'aliphatic_rings': Descriptors.NumAliphaticRings,
             'saturated_rings': Descriptors.NumSaturatedRings,
-            'aromatic_atoms': Descriptors.NumAromaticAtoms,
+            'aromatic_rings': Descriptors.NumAromaticRings,
             'heavy_atoms': Descriptors.HeavyAtomCount,
             'heteroatoms': Descriptors.NumHeteroatoms,
             
-            # Electronic properties
-            'dipole_moment': Descriptors.DipoleMoment,
-            'polarizability': Descriptors.Polarizability,
-            'electronegativity': Descriptors.Electronegativity,
+            # Electronic properties (using placeholders for unavailable descriptors)
+            'dipole_moment': lambda m: np.nan,
+            'polarizability': lambda m: np.nan,
+            'electronegativity': lambda m: np.nan,
             
             # Shape descriptors
-            'molecular_volume': Descriptors.MolVolume,
+            'molecular_volume': lambda m: np.nan,
             'surface_area': Descriptors.LabuteASA,
-            'radius_of_gyration': Descriptors.RadiusOfGyration,
-            'asphericity': Descriptors.Asphericity,
-            'eccentricity': Descriptors.Eccentricity,
-            'spherocity_index': Descriptors.SpherocityIndex,
+            'radius_of_gyration': lambda m: np.nan,
+            'asphericity': lambda m: np.nan,
+            'eccentricity': lambda m: np.nan,
+            'spherocity_index': lambda m: np.nan,
             
             # Connectivity indices
             'balaban_j': Descriptors.BalabanJ,
@@ -185,16 +185,19 @@ class MolecularDescriptorCalculator(MolecularDescriptorCalculatorInterface):
             'chi4v': Descriptors.Chi4v,
             
             # Fragment counts
-            'fsp3': Descriptors.FractionCsp3,
-            'fragments': Descriptors.NumFragments,
-            'bridgehead_atoms': Descriptors.NumBridgeheadAtoms,
-            'spiro_atoms': Descriptors.NumSpiroAtoms,
+            'fsp3': lambda m: np.nan,
+            'fragments': lambda m: np.nan,
+            'bridgehead_atoms': lambda m: np.nan,
+            'spiro_atoms': lambda m: np.nan,
             
             # Drug-likeness
             'qed': QED.qed,
-            'lipinski_violations': Lipinski.NumLipinskiHBD + Lipinski.NumLipinskiHBA + 
-                                 (lambda m: 1 if Descriptors.MolWt(m) > 500 else 0) +
-                                 (lambda m: 1 if Crippen.MolLogP(m) > 5 else 0),
+            'lipinski_violations': lambda m: (
+                (1 if Descriptors.NumHDonors(m) > 5 else 0) +
+                (1 if Descriptors.NumHAcceptors(m) > 10 else 0) +
+                (1 if Descriptors.MolWt(m) > 500 else 0) +
+                (1 if Crippen.MolLogP(m) > 5 else 0)
+            ),
         }
         
         if self.include_advanced:
@@ -203,7 +206,7 @@ class MolecularDescriptorCalculator(MolecularDescriptorCalculatorInterface):
                 'morgan_fingerprint_density': lambda m: len(rdMolDescriptors.GetMorganFingerprintAsBitVect(m, 2).GetOnBits()) / Descriptors.HeavyAtomCount(m),
                 'maccs_keys_density': lambda m: len(rdMolDescriptors.GetMACCSKeysFingerprint(m).GetOnBits()) / Descriptors.HeavyAtomCount(m),
                 'molecular_flexibility': lambda m: CalcNumRotatableBonds(m) / Descriptors.HeavyAtomCount(m),
-                'aromatic_ratio': lambda m: Descriptors.NumAromaticAtoms(m) / Descriptors.HeavyAtomCount(m),
+                'aromatic_ratio': lambda m: Descriptors.NumAromaticRings(m) / max(1, Descriptors.HeavyAtomCount(m)),
                 'heteroatom_ratio': lambda m: Descriptors.NumHeteroatoms(m) / Descriptors.HeavyAtomCount(m),
             }
             descriptors.update(advanced_descriptors)

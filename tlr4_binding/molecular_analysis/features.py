@@ -23,28 +23,95 @@ class MolecularFeatures:
     compound_name: str
     
     # 2D Molecular Descriptors (RDKit)
-    molecular_weight: float
-    logp: float  # Lipophilicity
-    tpsa: float  # Topological Polar Surface Area
-    rotatable_bonds: int
-    hbd: int  # H-bond donors
-    hba: int  # H-bond acceptors
-    formal_charge: int
-    
-    # 3D Structural Descriptors (PyMOL)
-    radius_of_gyration: float
-    molecular_volume: float
-    surface_area: float
-    asphericity: float
+    molecular_weight: float = 0.0
+    logp: float = 0.0  # Lipophilicity
+    tpsa: float = 0.0  # Topological Polar Surface Area
+    rotatable_bonds: int = 0
+    hbd: int = 0  # H-bond donors
+    hba: int = 0  # H-bond acceptors
+    formal_charge: int = 0
+    molar_refractivity: float = 0.0
     
     # Topological Features
-    ring_count: int
-    aromatic_rings: int
-    branching_index: float
+    ring_count: int = 0
+    aromatic_rings: int = 0
+    aliphatic_rings: int = 0
+    saturated_rings: int = 0
+    heavy_atoms: int = 0
+    heteroatoms: int = 0
     
     # Electronic Properties
-    dipole_moment: float
-    polarizability: float
+    dipole_moment: float = 0.0
+    polarizability: float = 0.0
+    electronegativity: float = 0.0
+    
+    # Shape descriptors
+    molecular_volume: float = 0.0
+    surface_area: float = 0.0
+    radius_of_gyration: float = 0.0
+    asphericity: float = 0.0
+    eccentricity: float = 0.0
+    spherocity_index: float = 0.0
+    
+    # Shape descriptors (continued)
+    elongation: float = 0.0
+    flatness: float = 0.0
+    compactness: float = 0.0
+    convexity: float = 0.0
+    concavity_index: float = 0.0
+    roughness_index: float = 0.0
+    
+    # Surface properties
+    polar_surface_area: float = 0.0
+    hydrophobic_surface_area: float = 0.0
+    positive_surface_area: float = 0.0
+    negative_surface_area: float = 0.0
+    surface_charge_density: float = 0.0
+    
+    # Conformational features
+    flexibility_index: float = 0.0
+    rigidity_index: float = 0.0
+    planarity: float = 0.0
+    torsional_angle_variance: float = 0.0
+    bond_angle_variance: float = 0.0
+    
+    # Connectivity indices
+    balaban_j: float = 0.0
+    bertz_ct: float = 0.0
+    chi0v: float = 0.0
+    chi1v: float = 0.0
+    chi2v: float = 0.0
+    chi3v: float = 0.0
+    chi4v: float = 0.0
+    
+    # Fragment counts
+    fsp3: float = 0.0
+    fragments: float = 0.0
+    bridgehead_atoms: float = 0.0
+    spiro_atoms: float = 0.0
+    
+    # Drug-likeness
+    qed: float = 0.0
+    lipinski_violations: float = 0.0
+    
+    # Advanced descriptors
+    morgan_fingerprint_density: float = 0.0
+    maccs_keys_density: float = 0.0
+    molecular_flexibility: float = 0.0
+    
+    # Coordinate-based features (when SMILES not available)
+    coord_radius_of_gyration: float = 0.0
+    coord_max_distance: float = 0.0
+    coord_mean_distance: float = 0.0
+    coord_length: float = 0.0
+    coord_width: float = 0.0
+    coord_height: float = 0.0
+    coord_volume: float = 0.0
+    coord_elongation: float = 0.0
+    coord_flatness: float = 0.0
+    coord_total_atoms: float = 0.0
+    aromatic_ratio: float = 0.0
+    heteroatom_ratio: float = 0.0
     
     # Additional metadata
     pdbqt_file: Optional[str] = None
@@ -53,33 +120,21 @@ class MolecularFeatures:
     
     def to_dict(self) -> Dict[str, Union[float, int, str]]:
         """Convert to dictionary for DataFrame creation."""
-        return {
-            'compound_name': self.compound_name,
-            'molecular_weight': self.molecular_weight,
-            'logp': self.logp,
-            'tpsa': self.tpsa,
-            'rotatable_bonds': self.rotatable_bonds,
-            'hbd': self.hbd,
-            'hba': self.hba,
-            'formal_charge': self.formal_charge,
-            'radius_of_gyration': self.radius_of_gyration,
-            'molecular_volume': self.molecular_volume,
-            'surface_area': self.surface_area,
-            'asphericity': self.asphericity,
-            'ring_count': self.ring_count,
-            'aromatic_rings': self.aromatic_rings,
-            'branching_index': self.branching_index,
-            'dipole_moment': self.dipole_moment,
-            'polarizability': self.polarizability,
-            'pdbqt_file': self.pdbqt_file,
-            'smiles': self.smiles,
-            'inchi': self.inchi
-        }
+        result = {}
+        for field_name, field_def in self.__dataclass_fields__.items():
+            value = getattr(self, field_name)
+            result[field_name] = value
+        return result
     
     @classmethod
     def from_dict(cls, data: Dict[str, Union[float, int, str]]) -> 'MolecularFeatures':
-        """Create instance from dictionary."""
-        return cls(**data)
+        """Create instance from dictionary, using default values for missing fields."""
+        # Filter data to only include fields that exist in the dataclass
+        valid_fields = set(cls.__dataclass_fields__.keys())
+        filtered_data = {k: v for k, v in data.items() if k in valid_fields}
+        
+        # Create instance with filtered data (missing fields will use defaults)
+        return cls(**filtered_data)
 
 
 @dataclass

@@ -46,4 +46,3 @@ python main.py --pipeline predict --model-path models/trained/best_model.joblib 
 # 7) (Recommended) Run tests in verbose mode
 python -m pytest tests -v
 ```
-

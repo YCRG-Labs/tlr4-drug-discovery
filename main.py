@@ -10,11 +10,12 @@ import argparse
 import sys
 from pathlib import Path
 import logging
+import pandas as pd
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
 
-from tlr4_binding.config import get_config
+from tlr4_binding.config.settings import get_config
 from tlr4_binding.utils.logging_config import setup_logging
 from tlr4_binding.molecular_analysis import MolecularFeatureExtractor
 from tlr4_binding.data_processing import DataPreprocessor
@@ -145,7 +146,17 @@ def run_complete_pipeline(args, config):
     
     # Split data
     from sklearn.model_selection import train_test_split
-    X = integrated_df.drop(columns=[config.data.affinity_column])
+    
+    # Drop non-numeric columns for ML training
+    columns_to_drop = [config.data.affinity_column]
+    
+    # Add string/object columns that should not be used for training
+    string_columns = ['compound_name', 'pdbqt_file', 'smiles', 'inchi', 'ligand', 'matched_compound']
+    for col in string_columns:
+        if col in integrated_df.columns:
+            columns_to_drop.append(col)
+    
+    X = integrated_df.drop(columns=columns_to_drop)
     y = integrated_df[config.data.affinity_column]
     
     X_train, X_test, y_train, y_test = train_test_split(
@@ -204,7 +215,17 @@ def run_model_training(args, config):
     
     # Train models
     trainer = MLModelTrainer()
-    X = integrated_df.drop(columns=[config.data.affinity_column])
+    
+    # Drop non-numeric columns for ML training
+    columns_to_drop = [config.data.affinity_column]
+    
+    # Add string/object columns that should not be used for training
+    string_columns = ['compound_name', 'pdbqt_file', 'smiles', 'inchi', 'ligand', 'matched_compound']
+    for col in string_columns:
+        if col in integrated_df.columns:
+            columns_to_drop.append(col)
+    
+    X = integrated_df.drop(columns=columns_to_drop)
     y = integrated_df[config.data.affinity_column]
     
     trained_models = trainer.train_models(X, y)

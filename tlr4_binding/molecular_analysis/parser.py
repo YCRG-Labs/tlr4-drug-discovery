@@ -49,8 +49,8 @@ class PDBQTParser(PDBQTParserInterface):
             strict_validation: If True, enforce strict PDBQT format validation
         """
         self.strict_validation = strict_validation
-        self.supported_atoms = {'C', 'N', 'O', 'S', 'P', 'F', 'Cl', 'Br', 'I', 'H'}
-        self.required_sections = ['REMARK', 'ATOM', 'ENDMDL']
+        self.supported_atoms = {'C', 'N', 'O', 'S', 'P', 'F', 'Cl', 'Br', 'I', 'H', 'A'}  # A for aromatic
+        self.required_sections = ['REMARK', 'ATOM']  # Remove ENDMDL as it's not always present
     
     def parse_file(self, file_path: str) -> Dict[str, Union[str, List[Dict]]]:
         """
@@ -320,15 +320,20 @@ class PDBQTParser(PDBQTParserInterface):
         if not parsed_data['atoms']:
             errors.append("No atoms found in file")
         
-        if not parsed_data['models']:
-            errors.append("No models found in file")
+        # Models are optional - many PDBQT files don't have explicit MODEL sections
+        # if not parsed_data['models']:
+        #     errors.append("No models found in file")
         
         # Validate atom data
         for atom in parsed_data['atoms']:
-            if not atom.get('element'):
-                errors.append(f"Atom {atom.get('atom_serial', 'unknown')} missing element")
+            element = atom.get('element', '')
             
-            if atom.get('element') not in self.supported_atoms:
-                errors.append(f"Unsupported element: {atom.get('element')}")
+            # Skip validation for empty elements or convert A to C for aromatic carbons
+            if element == 'A':
+                atom['element'] = 'C'  # Convert aromatic marker to carbon
+            elif element and element not in self.supported_atoms:
+                # Only report truly unsupported elements
+                if element not in ['Unknown', '']:
+                    errors.append(f"Unsupported element: {element}")
         
         return errors

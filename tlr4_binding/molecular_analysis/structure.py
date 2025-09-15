@@ -17,9 +17,12 @@ logger = logging.getLogger(__name__)
 try:
     import pymol
     from pymol import cmd
+    # Test if PyMOL can actually be used
+    pymol.finish_launching(['pymol', '-c'])
     PYMOL_AVAILABLE = True
-except ImportError:
-    logger.warning("PyMOL not available. 3D structural analysis will be limited.")
+    logger.info("PyMOL initialized successfully")
+except (ImportError, Exception) as e:
+    logger.warning(f"PyMOL not available: {str(e)}. 3D structural analysis will be limited.")
     PYMOL_AVAILABLE = False
 
 

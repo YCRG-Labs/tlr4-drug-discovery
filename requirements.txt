@@ -1,5 +1,5 @@
 # Core scientific computing
-numpy>=1.21.0
+numpy>=1.21.0,<2.0  # Compatible with both RDKit and PyMOL - must stay below 2.0
 pandas>=1.3.0
 scipy>=1.7.0
 
@@ -9,8 +9,8 @@ xgboost>=1.5.0
 lightgbm>=3.2.0
 
 # Molecular analysis
-rdkit-pypi>=2022.3.0
-pymol-open-source>=2.5.0
+rdkit>=2023.3.1  # Use newer RDKit version
+# pymol-open-source>=2.5.0  # Commented out due to NumPy 2.0 requirement conflict
 
 # Data processing
 fuzzywuzzy>=0.18.0
@@ -42,8 +42,8 @@ torch-geometric>=2.0.0
 dgl>=0.8.0
 
 # Optional: Experiment tracking
-# mlflow>=1.20.0
-# wandb>=0.12.0
+mlflow>=1.20.0
+wandb>=0.12.0
 
 # Model interpretability
 shap>=0.40.0
@@ -51,5 +51,5 @@ lime>=0.2.0
 networkx>=2.6.0
 
 # Optional: Hyperparameter optimization
-# optuna>=2.10.0
-# hyperopt>=0.2.7
+optuna>=2.10.0
+hyperopt>=0.2.7

@@ -211,4 +211,12 @@ __marimo__/
 /results/
 /models/
 /checkpoints/
-/logs/
+/logs/#
+ Project-specific
+/diagnostic_output/
+/research_results/
+/enhanced_research_results/
+*.joblib
+*.pkl
+*.pickle
+IMPLEMENTATION_SUMMARY.md
