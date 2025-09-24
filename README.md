@@ -27,11 +27,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # 3) Run Enhanced Research Pipeline (RECOMMENDED)
-python main.py \
-  --pdbqt-dir binding-data/raw/pdbqt \
-  --binding-csv binding-data/processed/processed_logs.csv \
-  --output-dir enhanced_research_results \
-  --splitting scaffold
+python main.py --pdbqt-dir binding-data/raw/pdbqt --binding-csv binding-data/processed/processed_logs.csv --output-dir results --splitting scaffold
 
 # Alternative splitting methods:
 # --splitting random    # Random splitting
@@ -49,12 +45,8 @@ python -m pytest tests -v
 python main.py --pipeline features --pdbqt-dir binding-data/raw/pdbqt
 
 # Model training only  
-python main.py --pipeline train \
-  --features-csv data/processed/features.csv \
-  --binding-csv binding-data/processed/processed_logs.csv
+python main.py --pipeline train --features-csv data/processed/features.csv --binding-csv binding-data/processed/processed_logs.csv
 
 # Single compound prediction
-python main.py --pipeline predict \
-  --model-path models/trained/best_model.joblib \
-  --pdbqt-file binding-data/raw/pdbqt/example.pdbqt
+python main.py --pipeline predict --model-path models/trained/best_model.joblib --pdbqt-file binding-data/raw/pdbqt/example.pdbqt
 ```

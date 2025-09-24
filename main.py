@@ -41,8 +41,8 @@ from tlr4_binding.ml_components import MLModelTrainer
 from tlr4_binding.ml_components.statistical_validation import (
     StatisticalValidator, BaselineComparator, validate_model_performance
 )
-from fix_pipeline_issues import PipelineFixer
-from research_grade_enhancements import (
+from tlr4_binding.utils.fix_pipeline_issues import PipelineFixer
+from tlr4_binding.utils.research_grade_enhancements import (
     EnhancedUncertaintyQuantifier, BiasDetector, LiteratureBaselineComparator,
     ModelCalibrator, LearningCurveAnalyzer, create_comprehensive_research_report
 )
@@ -71,7 +71,7 @@ class EnhancedResearchTLR4Pipeline:
     def __init__(self, 
                  pdbqt_dir: str,
                  binding_csv: str,
-                 output_dir: str = "enhanced_research_results",
+                 output_dir: str = "results",
                  splitting_method: str = "scaffold",
                  test_size: float = 0.2,
                  val_size: float = 0.1,
@@ -270,7 +270,7 @@ class EnhancedResearchTLR4Pipeline:
         logger.info(f"✅ Applied advanced imputation")
         
         # Fix feature quality issues that cause negative R²
-        from fix_negative_r2 import FeatureQualityFixer
+        from tlr4_binding.utils.fix_negative_r2 import FeatureQualityFixer
         quality_fixer = FeatureQualityFixer()
         processed_df = quality_fixer.fix_feature_quality(processed_df)
         logger.info(f"✅ Fixed feature quality issues")
@@ -650,18 +650,27 @@ class EnhancedResearchTLR4Pipeline:
                     model_for_conformal, X_cal, y_cal, X_test
                 )
                 
+                # Calculate confidence interval widths
+                bootstrap_width = np.mean(bootstrap_results['upper_bound'] - bootstrap_results['lower_bound'])
+                conformal_width = np.mean(conformal_results['upper_bound'] - conformal_results['lower_bound'])
+                
                 uncertainty_results[model_name] = {
                     'bootstrap': bootstrap_results,
                     'conformal': conformal_results,
+                    'confidence_intervals': {
+                        'bootstrap_coverage': bootstrap_results.get('coverage', 0),
+                        'bootstrap_width': bootstrap_width,
+                        'conformal_width': conformal_width
+                    },
                     'summary': {
                         'bootstrap_coverage': bootstrap_results.get('coverage', 0),
-                        'bootstrap_mean_width': np.mean(bootstrap_results['confidence_intervals']['width']),
-                        'conformal_mean_width': np.mean(conformal_results['confidence_intervals']['width'])
+                        'bootstrap_mean_width': bootstrap_width,
+                        'conformal_mean_width': conformal_width
                     }
                 }
                 
                 logger.info(f"      Bootstrap coverage: {bootstrap_results.get('coverage', 0):.3f}")
-                logger.info(f"      Mean CI width: {np.mean(bootstrap_results['confidence_intervals']['width']):.3f}")
+                logger.info(f"      Mean CI width: {bootstrap_width:.3f}")
                 
             except Exception as e:
                 logger.error(f"      Uncertainty quantification failed for {model_name}: {e}")
@@ -694,10 +703,17 @@ class EnhancedResearchTLR4Pipeline:
         logger.info(f"✅ Literature comparison completed for {best_model}")
         
         # Log key comparisons
-        for benchmark_name, comparison in literature_comparison.items():
-            if 'improvements' in comparison and 'r2' in comparison['improvements']:
-                r2_improvement = comparison['improvements']['r2']
-                logger.info(f"   vs {benchmark_name}: R² improvement = {r2_improvement:+.4f}")
+        if isinstance(literature_comparison, dict) and 'performance_category' in literature_comparison:
+            logger.info(f"   Performance category: {literature_comparison['performance_category']}")
+            logger.info(f"   Best R²: {literature_comparison.get('best_r2', 0):.4f}")
+            
+            # Log against literature benchmarks
+            if 'literature_benchmarks' in literature_comparison:
+                benchmarks = literature_comparison['literature_benchmarks']
+                best_r2 = literature_comparison.get('best_r2', 0)
+                for benchmark_name, benchmark_r2 in benchmarks.items():
+                    improvement = best_r2 - benchmark_r2
+                    logger.info(f"   vs {benchmark_name} ({benchmark_r2:.3f}): {improvement:+.4f}")
         
         return literature_comparison
     
@@ -713,16 +729,8 @@ class EnhancedResearchTLR4Pipeline:
         
         # Create comprehensive report using the enhanced reporting function
         research_report = create_comprehensive_research_report(
-            pipeline_results={
-                'best_model': statistical_results.get('best_model', 'Unknown'),
-                'model_performance': test_results,
-                'statistical_validation': statistical_results
-            },
-            uncertainty_results=uncertainty_results,
-            bias_analysis=bias_analysis,
-            literature_comparison=literature_comparison,
-            calibration_results=test_results.get('calibration_results', {}),
-            learning_curves=model_results.get('learning_curves', {})
+            processed_df, bias_analysis, baseline_results, model_results,
+            statistical_results, test_results, uncertainty_results, literature_comparison
         )
         
         # Add pipeline-specific information

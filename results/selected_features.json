@@ -1,0 +1,17 @@
+[
+  "molecular_weight",
+  "logp",
+  "heavy_atoms",
+  "molar_refractivity",
+  "ring_count",
+  "balaban_j",
+  "bertz_ct",
+  "chi0v",
+  "kappa1",
+  "chi2v",
+  "chi3v",
+  "hall_kier_alpha",
+  "num_aliphatic_carbocycles",
+  "flexibility",
+  "binding_efficiency"
+]

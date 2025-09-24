@@ -208,16 +208,17 @@ __marimo__/
 
 /mlruns/
 /data/
-/results/
-/models/
 /checkpoints/
-/logs/#
- Project-specific
+/logs/
+
+# Project-specific
 /diagnostic_output/
-/research_results/
-/enhanced_research_results/
 *.joblib
 *.pkl
 *.pickle
 IMPLEMENTATION_SUMMARY.md
-/paper/
+
+# Keep results structure but ignore large files
+/results/experiments/*.json
+/results/models/*.joblib
+/results/models/*.pkl
