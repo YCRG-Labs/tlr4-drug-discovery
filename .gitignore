@@ -219,6 +219,7 @@ __marimo__/
 IMPLEMENTATION_SUMMARY.md
 
 # Keep results structure but ignore large files
-/results/experiments/*.json
-/results/models/*.joblib
-/results/models/*.pkl
+/results/
+/paper/
+/notes/
+/.kiro/

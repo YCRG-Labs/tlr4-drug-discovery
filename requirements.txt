@@ -41,6 +41,10 @@ torch>=1.11.0
 torch-geometric>=2.0.0
 dgl>=0.8.0
 
+# Transformers for ChemBERTa
+transformers>=4.20.0
+tokenizers>=0.12.0
+
 # Optional: Experiment tracking
 mlflow>=1.20.0
 wandb>=0.12.0
